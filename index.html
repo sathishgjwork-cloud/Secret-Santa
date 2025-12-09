@@ -142,26 +142,18 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  /* ================= API URL (Replace this!) ================= */
-  const API_URL = "https://script.google.com/macros/s/AKfycbybtamuuyw-2dyMvYEk8hUBcrxndehoytxQLL_-KxCdqIIMY8reLEXq4seN8rdpnJOrMg/exec";
+  // 🔗 1. SET YOUR APPS SCRIPT URL HERE
+  const API_URL = "https://script.google.com/macros/s/AKfycbyecrBRcLg3DcAVFH8-_WeBxxPg3gfP2NWsj_o1p91Th-SLLG6r30Z5sB18Y8l2YoW1VQ/exec";
 
-  /* Toast */
+  // Toast helper
+  const toast = document.getElementById('toast');
   function showToast(msg){
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'),2000);
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2000);
   }
 
-  /* POST JSON API */
-  async function apiCall(action, payload){
-    return fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, ...payload })
-    }).then(r => r.json());
-  }
-
-  /* Tabs */
+  // 🔁 2. TABS
   document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{
       document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -171,83 +163,158 @@
     });
   });
 
-  /* === Create Group === */
-  btnCreateGroup.addEventListener('click', async ()=>{
-    const groupNameValue = inputGroupName.value.trim();
-    const adminEmailValue = inputAdminEmail.value.trim();
-    if(!groupNameValue || !adminEmailValue) return showToast("Enter details");
-    const res = await apiCall("createGroup",{ groupName: groupNameValue, adminEmail: adminEmailValue });
+  // 🌐 3. API CALL (POST JSON to Apps Script)
+  async function apiCall(action, payload){
+    try{
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      return await res.json();
+    }catch(err){
+      console.error("API error:", err);
+      showToast("Network error");
+      return { ok:false, error:"fetch_failed" };
+    }
+  }
+
+  // 🧩 4. ADMIN: CREATE GROUP
+  document.getElementById('btnCreateGroup').addEventListener('click', async ()=>{
+    const groupNameValue = document.getElementById('groupName').value.trim();
+    const adminEmailValue = document.getElementById('adminEmailCreate').value.trim();
+
+    if(!groupNameValue || !adminEmailValue){
+      showToast('Enter group name & admin email');
+      return;
+    }
+
+    const res = await apiCall('createGroup',{ groupName: groupNameValue, adminEmail: adminEmailValue });
     if(res.ok){
-      groupCodeInfo.textContent = `Group created! Code: ${res.groupCode}`;
-      showToast("Group created");
-    } else showToast(res.error || "Error");
+      document.getElementById('groupCodeInfo').textContent =
+        `Group created! Code: ${res.groupCode}. Share this code + website link with participants.`;
+      showToast('Group created');
+    }else{
+      showToast(res.error || 'Error');
+    }
   });
 
-  /* === Join === */
-  btnJoinGroup.addEventListener('click', async ()=>{
-    const res = await apiCall("joinGroup",{
-      groupCode: inputJoinGroupCode.value.trim(),
-      name: inputJoinName.value.trim(),
-      email: inputJoinEmail.value.trim(),
-      wishlist: inputJoinWishlist.value.trim()
-    });
-    joinStatus.textContent = res.ok ? "Joined successfully" : res.error;
-    showToast(res.ok ? "Joined" : res.error);
+  // 🧩 5. PARTICIPANT: JOIN GROUP
+  document.getElementById('btnJoinGroup').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('joinGroupCode').value.trim();
+    const name = document.getElementById('joinName').value.trim();
+    const email = document.getElementById('joinEmail').value.trim();
+    const wishlist = document.getElementById('joinWishlist').value.trim();
+
+    if(!groupCode || !name || !email){
+      showToast('Fill group code, name, email');
+      return;
+    }
+
+    const res = await apiCall('joinGroup',{groupCode,name,email,wishlist});
+    document.getElementById('joinStatus').textContent = res.ok ? (res.message || 'Joined group') : (res.error || 'Error');
+    showToast(res.ok ? 'Joined group' : res.error || 'Error');
   });
 
-  btnSendOtp.addEventListener('click', async ()=>{
-    const res = await apiCall("sendOtp",{
-      groupCode: inputJoinGroupCode.value.trim(),
-      email: inputJoinEmail.value.trim()
-    });
-    joinStatus.textContent = res.ok ? "OTP sent" : res.error;
-    showToast(res.ok ? "OTP sent" : res.error);
+  // 🧩 6. SEND OTP
+  document.getElementById('btnSendOtp').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('joinGroupCode').value.trim();
+    const email = document.getElementById('joinEmail').value.trim();
+    if(!groupCode || !email){
+      showToast('Enter group code & email');
+      return;
+    }
+    const res = await apiCall('sendOtp',{groupCode,email});
+    document.getElementById('joinStatus').textContent = res.ok ? res.message : (res.error || 'Error');
+    showToast(res.ok ? 'OTP sent' : res.error || 'Error');
   });
 
-  btnVerifyAccept.addEventListener('click', async ()=>{
-    if(!checkRules.checked) return showToast("Accept rules first");
-    const verify = await apiCall("verifyOtp",{
-      groupCode: inputJoinGroupCode.value.trim(),
-      email: inputJoinEmail.value.trim(),
-      otp: inputOtp.value.trim()
-    });
-    if(!verify.ok) return showToast(verify.error);
-    const accept = await apiCall("acceptRules",{
-      groupCode: inputJoinGroupCode.value.trim(),
-      email: inputJoinEmail.value.trim()
-    });
-    joinStatus.textContent = accept.ok ? "Rules accepted" : accept.error;
-    showToast("Verified");
+  // 🧩 7. VERIFY OTP & ACCEPT RULES
+  document.getElementById('btnVerifyAccept').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('joinGroupCode').value.trim();
+    const email = document.getElementById('joinEmail').value.trim();
+    const otp = document.getElementById('otpInput').value.trim();
+    const rulesAccepted = document.getElementById('rulesCheck').checked;
+
+    if(!groupCode || !email || !otp){
+      showToast('Enter code, email & OTP');
+      return;
+    }
+    if(!rulesAccepted){
+      showToast('Please accept the rules');
+      return;
+    }
+
+    const res1 = await apiCall('verifyOtp',{groupCode,email,otp});
+    if(!res1.ok){
+      document.getElementById('joinStatus').textContent = res1.error || 'OTP error';
+      showToast(res1.error || 'OTP error');
+      return;
+    }
+
+    const res2 = await apiCall('acceptRules',{groupCode,email});
+    if(res2.ok){
+      let msg = 'You are verified and accepted rules.';
+      if(res2.allAccepted) msg += ' All participants accepted. Admin can start the game.';
+      document.getElementById('joinStatus').textContent = msg;
+      showToast('Verification & rules accepted');
+    }else{
+      document.getElementById('joinStatus').textContent = res2.error || 'Error';
+      showToast(res2.error || 'Error');
+    }
   });
 
-  /* === Admin Start === */
-  btnCheckStatus.addEventListener('click', async ()=>{
-    const res = await apiCall("checkGroupStatus",{ groupCode: inputAdminGroupCode.value.trim() });
-    adminStatus.textContent = res.ok
-      ? `All accepted: ${res.allAccepted} • Started: ${res.started}`
-      : res.error;
-    btnStartGame.disabled = !(res.ok && res.allAccepted && res.started === "NO");
+  // 🧩 8. ADMIN: CHECK STATUS
+  document.getElementById('btnCheckStatus').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('adminGroupCode').value.trim();
+    const adminEmail = document.getElementById('adminEmailStart').value.trim();
+    if(!groupCode || !adminEmail){
+      showToast('Enter group code & admin email');
+      return;
+    }
+    const res = await apiCall('checkGroupStatus',{groupCode,adminEmail});
+    if(res.ok){
+      document.getElementById('btnStartGame').disabled = !(res.allAccepted && res.started === 'NO');
+      document.getElementById('adminStatus').textContent =
+        `All accepted: ${res.allAccepted ? 'YES' : 'NO'}, Game already started: ${res.started}`;
+      showToast('Status checked');
+    }else{
+      showToast(res.error || 'Error');
+      document.getElementById('adminStatus').textContent = res.error || 'Error';
+    }
   });
 
-  btnStartGame.addEventListener('click', async ()=>{
-    const res = await apiCall("startGame",{ groupCode: inputAdminGroupCode.value.trim() });
-    adminStatus.textContent = res.ok
-      ? `Game started. Emails sent to ${res.count} players`
-      : res.error;
-    showToast(res.ok ? "Game started" : res.error);
+  // 🧩 9. ADMIN: START GAME
+  document.getElementById('btnStartGame').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('adminGroupCode').value.trim();
+    const adminEmail = document.getElementById('adminEmailStart').value.trim();
+    const res = await apiCall('startGame',{groupCode,adminEmail});
+    if(res.ok){
+      showToast('Game started & emails sent');
+      document.getElementById('adminStatus').textContent =
+        `Game started. Emails sent to ${res.count} participants.`;
+      document.getElementById('btnStartGame').disabled = true;
+    }else{
+      showToast(res.error || 'Error');
+      document.getElementById('adminStatus').textContent = res.error || 'Error';
+    }
   });
 
-  /* === Gift Status === */
-  btnUpdateGift.addEventListener('click', async ()=>{
-    const res = await apiCall("updateGiftStatus",{
-      groupCode: inputGiftGroupCode.value.trim(),
-      email: inputGiftEmail.value.trim(),
-      status: selectGiftStatus.value,
-      photoUrl: inputGiftPhoto.value.trim()
-    });
-    showToast(res.ok ? "Status updated" : res.error);
-  });
+  // 🧩 10. GIFT STATUS
+  document.getElementById('btnUpdateGift').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('giftGroupCode').value.trim();
+    const email = document.getElementById('giftEmail').value.trim();
+    const photoUrl = document.getElementById('giftPhotoUrl').value.trim();
+    const status = document.getElementById('giftStatusSelect').value;
 
+    if(!groupCode || !email){
+      showToast('Enter group code & email');
+      return;
+    }
+    const res = await apiCall('updateGiftStatus',{groupCode,email,photoUrl,status});
+    showToast(res.ok ? 'Status updated' : (res.error || 'Error'));
+  });
 </script>
+
 </body>
 </html>
