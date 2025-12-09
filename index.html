@@ -48,32 +48,27 @@
 <div class="container">
 
   <h1>Secret Santa Group Game 🎄</h1>
-  <p style="text-align:center;font-size:.85rem;color:#9ca3af;margin-bottom:10px;">
-    Create a group → Join with OTP → Accept rules → Admin starts the game.
-  </p>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="admin-create">1. Admin: Create Group</button>
-    <button class="tab-btn" data-tab="join">2. Participant: Join & Accept Rules</button>
-    <button class="tab-btn" data-tab="admin-start">3. Admin: Start Game</button>
+    <button class="tab-btn" data-tab="join">2. Join & Rules</button>
+    <button class="tab-btn" data-tab="admin-start">3. Start Game</button>
     <button class="tab-btn" data-tab="gift-status">4. Gift Status</button>
   </div>
 
-  <!-- === Panel 1: Create Group === -->
+  <!-- Create Group -->
   <div class="panel active" id="admin-create">
     <div class="box">
       <label>Group Name</label>
       <input id="inputGroupName" />
-      <label style="margin-top:6px;">Admin Email</label>
+      <label>Admin Email</label>
       <input id="inputAdminEmail" />
-      <div class="btn-row">
-        <button class="btn-main" id="btnCreateGroup">Create Group & Get Code</button>
-      </div>
+      <button class="btn-main" id="btnCreateGroup">Create Group & Get Code</button>
       <p class="small" id="groupCodeInfo"></p>
     </div>
   </div>
 
-  <!-- === Panel 2: Join Group === -->
+  <!-- Join Group -->
   <div class="panel" id="join">
     <div class="box">
       <label>Group Code</label>
@@ -85,235 +80,155 @@
       <label>Your Wishlist</label>
       <textarea id="inputJoinWishlist"></textarea>
 
-      <button class="btn-main" id="btnJoinGroup" style="margin-top:6px;">Join Group</button>
-      <hr style="border:none;border-top:1px solid rgba(55,65,81,.7);margin:10px 0;">
+      <button class="btn-main" id="btnJoinGroup">Join Group</button>
 
-      <label>Request OTP</label>
-      <button class="btn-ghost" id="btnSendOtp">Send OTP to Email</button>
-      <label style="margin-top:8px;">Enter OTP</label>
+      <hr>
+
+      <label>Enter OTP</label>
       <input id="inputOtp" />
 
-      <label style="margin-top:6px;display:flex;gap:6px;font-size:.8rem;">
-        <input type="checkbox" id="checkRules" style="width:14px;height:14px;">
-        I accept all the rules.
+      <label style="display:flex;gap:6px;font-size:.8rem;">
+        <input type="checkbox" id="checkRules"> I accept rules.
       </label>
 
-      <button class="btn-main" id="btnVerifyAccept">Verify & Accept Rules</button>
-      <p class="small" id="joinStatus"></p>
+      <button class="btn-main" id="btnVerifyAccept">Verify & Accept</button>
+      <p id="joinStatus" class="small"></p>
     </div>
   </div>
 
-  <!-- === Panel 3: Admin Start Game === -->
+  <!-- Admin Start -->
   <div class="panel" id="admin-start">
     <div class="box">
       <label>Group Code</label>
       <input id="inputAdminGroupCode" />
       <label>Admin Email</label>
       <input id="inputAdminStartEmail" />
-      <div class="btn-row">
-        <button class="btn-ghost" id="btnCheckStatus">Check Status</button>
-        <button class="btn-main" id="btnStartGame" disabled>Start Game & Send Emails</button>
-      </div>
-      <p class="small" id="adminStatus"></p>
+      <button class="btn-main" id="btnCheckStatus">Check Status</button>
+      <button class="btn-main" id="btnStartGame">Start Game</button>
+      <p id="adminStatus" class="small"></p>
     </div>
   </div>
 
-  <!-- === Panel 4: Gift Status === -->
+  <!-- Gift Status -->
   <div class="panel" id="gift-status">
     <div class="box">
       <label>Group Code</label>
       <input id="inputGiftGroupCode" />
       <label>Your Email</label>
       <input id="inputGiftEmail" />
-      <label>Gift Photo (Drive Link)</label>
+      <label>Gift Photo Link</label>
       <input id="inputGiftPhoto" />
-      <label>Gift Status</label>
-      <select id="selectGiftStatus"
-        style="width:100%;border-radius:10px;margin-top:2px;border:1px solid rgba(75,85,99,.9);
-        background:rgba(15,23,42,.9);color:#e5e7eb;padding:6px 9px;">
-        <option value="RECEIVED">I got my gift 🎁</option>
-        <option value="NOT_RECEIVED">I did NOT receive my gift</option>
+      <label>Status</label>
+      <select id="selectGiftStatus">
+        <option value="RECEIVED">Received</option>
+        <option value="NOT_RECEIVED">Not Received</option>
       </select>
-      <button class="btn-main" id="btnUpdateGift" style="margin-top:8px;">Submit Gift Status</button>
+      <button class="btn-main" id="btnUpdateGift">Submit</button>
     </div>
   </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-  // 🔗 1. SET YOUR APPS SCRIPT URL HERE
-  const API_URL = "https://script.google.com/macros/s/AKfycbyecrBRcLg3DcAVFH8-_WeBxxPg3gfP2NWsj_o1p91Th-SLLG6r30Z5sB18Y8l2YoW1VQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyecrBRcLg3DcAVFH8-_WeBxxPg3gfP2NWsj_o1p91Th-SLLG6r30Z5sB18Y8l2YoW1VQ/exec";
 
-  // Toast helper
-  const toast = document.getElementById('toast');
-  function showToast(msg){
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'),2000);
-  }
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
 
-  // 🔁 2. TABS
-  document.querySelectorAll('.tab-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(btn.dataset.tab).classList.add('active');
+async function apiCall(action, payload){
+  try{
+    const response = await fetch(API_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ action, ...payload })
     });
-  });
-
-  // 🌐 3. API CALL (POST JSON to Apps Script)
-  async function apiCall(action, payload){
-    try{
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...payload })
-      });
-      return await res.json();
-    }catch(err){
-      console.error("API error:", err);
-      showToast("Network error");
-      return { ok:false, error:"fetch_failed" };
-    }
+    return await response.json();
+  } catch (err){
+    console.log(err);
+    showToast("Network error");
+    return { ok:false };
   }
+}
 
-  // 🧩 4. ADMIN: CREATE GROUP
-  document.getElementById('btnCreateGroup').addEventListener('click', async ()=>{
-    const groupNameValue = document.getElementById('groupName').value.trim();
-    const adminEmailValue = document.getElementById('adminEmailCreate').value.trim();
+// Create Group
+document.getElementById("btnCreateGroup").onclick = async ()=>{
+  const name = document.getElementById("inputGroupName").value.trim();
+  const email = document.getElementById("inputAdminEmail").value.trim();
 
-    if(!groupNameValue || !adminEmailValue){
-      showToast('Enter group name & admin email');
-      return;
-    }
+  if(!name || !email){ showToast("Enter details"); return; }
 
-    const res = await apiCall('createGroup',{ groupName: groupNameValue, adminEmail: adminEmailValue });
-    if(res.ok){
-      document.getElementById('groupCodeInfo').textContent =
-        `Group created! Code: ${res.groupCode}. Share this code + website link with participants.`;
-      showToast('Group created');
-    }else{
-      showToast(res.error || 'Error');
-    }
-  });
+  const res = await apiCall("createGroup",{ groupName:name, adminEmail:email });
 
-  // 🧩 5. PARTICIPANT: JOIN GROUP
-  document.getElementById('btnJoinGroup').addEventListener('click', async ()=>{
-    const groupCode = document.getElementById('joinGroupCode').value.trim();
-    const name = document.getElementById('joinName').value.trim();
-    const email = document.getElementById('joinEmail').value.trim();
-    const wishlist = document.getElementById('joinWishlist').value.trim();
+  if(res.ok){
+    document.getElementById("groupCodeInfo").textContent =
+      "Group Code: " + res.groupCode;
+    showToast("Created");
+  }
+};
 
-    if(!groupCode || !name || !email){
-      showToast('Fill group code, name, email');
-      return;
-    }
+// Join
+document.getElementById("btnJoinGroup").onclick = async ()=>{
+  const group = document.getElementById("inputJoinGroupCode").value.trim();
+  const name = document.getElementById("inputJoinName").value.trim();
+  const email = document.getElementById("inputJoinEmail").value.trim();
+  const wish = document.getElementById("inputJoinWishlist").value.trim();
 
-    const res = await apiCall('joinGroup',{groupCode,name,email,wishlist});
-    document.getElementById('joinStatus').textContent = res.ok ? (res.message || 'Joined group') : (res.error || 'Error');
-    showToast(res.ok ? 'Joined group' : res.error || 'Error');
-  });
+  const res = await apiCall("joinGroup",{ groupCode:group, name,email,wishlist:wish });
+  document.getElementById("joinStatus").textContent = res.ok ? "Joined!" : res.error;
+};
 
-  // 🧩 6. SEND OTP
-  document.getElementById('btnSendOtp').addEventListener('click', async ()=>{
-    const groupCode = document.getElementById('joinGroupCode').value.trim();
-    const email = document.getElementById('joinEmail').value.trim();
-    if(!groupCode || !email){
-      showToast('Enter group code & email');
-      return;
-    }
-    const res = await apiCall('sendOtp',{groupCode,email});
-    document.getElementById('joinStatus').textContent = res.ok ? res.message : (res.error || 'Error');
-    showToast(res.ok ? 'OTP sent' : res.error || 'Error');
-  });
+// OTP verify
+document.getElementById("btnVerifyAccept").onclick = async ()=>{
+  const group = document.getElementById("inputJoinGroupCode").value.trim();
+  const email = document.getElementById("inputJoinEmail").value.trim();
+  const otp = document.getElementById("inputOtp").value.trim();
+  const rules = document.getElementById("checkRules").checked;
 
-  // 🧩 7. VERIFY OTP & ACCEPT RULES
-  document.getElementById('btnVerifyAccept').addEventListener('click', async ()=>{
-    const groupCode = document.getElementById('joinGroupCode').value.trim();
-    const email = document.getElementById('joinEmail').value.trim();
-    const otp = document.getElementById('otpInput').value.trim();
-    const rulesAccepted = document.getElementById('rulesCheck').checked;
+  if(!rules){ showToast("Accept rules first"); return; }
 
-    if(!groupCode || !email || !otp){
-      showToast('Enter code, email & OTP');
-      return;
-    }
-    if(!rulesAccepted){
-      showToast('Please accept the rules');
-      return;
-    }
+  const res = await apiCall("verifyOtp",{ groupCode:group,email,otp });
+  if(!res.ok){ showToast(res.error); return; }
 
-    const res1 = await apiCall('verifyOtp',{groupCode,email,otp});
-    if(!res1.ok){
-      document.getElementById('joinStatus').textContent = res1.error || 'OTP error';
-      showToast(res1.error || 'OTP error');
-      return;
-    }
+  await apiCall("acceptRules",{ groupCode:group,email });
+  showToast("Verified");
+};
 
-    const res2 = await apiCall('acceptRules',{groupCode,email});
-    if(res2.ok){
-      let msg = 'You are verified and accepted rules.';
-      if(res2.allAccepted) msg += ' All participants accepted. Admin can start the game.';
-      document.getElementById('joinStatus').textContent = msg;
-      showToast('Verification & rules accepted');
-    }else{
-      document.getElementById('joinStatus').textContent = res2.error || 'Error';
-      showToast(res2.error || 'Error');
-    }
-  });
+// Admin Check
+document.getElementById("btnCheckStatus").onclick = async ()=>{
+  const group = document.getElementById("inputAdminGroupCode").value.trim();
+  const email = document.getElementById("inputAdminStartEmail").value.trim();
 
-  // 🧩 8. ADMIN: CHECK STATUS
-  document.getElementById('btnCheckStatus').addEventListener('click', async ()=>{
-    const groupCode = document.getElementById('adminGroupCode').value.trim();
-    const adminEmail = document.getElementById('adminEmailStart').value.trim();
-    if(!groupCode || !adminEmail){
-      showToast('Enter group code & admin email');
-      return;
-    }
-    const res = await apiCall('checkGroupStatus',{groupCode,adminEmail});
-    if(res.ok){
-      document.getElementById('btnStartGame').disabled = !(res.allAccepted && res.started === 'NO');
-      document.getElementById('adminStatus').textContent =
-        `All accepted: ${res.allAccepted ? 'YES' : 'NO'}, Game already started: ${res.started}`;
-      showToast('Status checked');
-    }else{
-      showToast(res.error || 'Error');
-      document.getElementById('adminStatus').textContent = res.error || 'Error';
-    }
-  });
+  const res = await apiCall("checkGroupStatus",{ groupCode:group,adminEmail:email });
 
-  // 🧩 9. ADMIN: START GAME
-  document.getElementById('btnStartGame').addEventListener('click', async ()=>{
-    const groupCode = document.getElementById('adminGroupCode').value.trim();
-    const adminEmail = document.getElementById('adminEmailStart').value.trim();
-    const res = await apiCall('startGame',{groupCode,adminEmail});
-    if(res.ok){
-      showToast('Game started & emails sent');
-      document.getElementById('adminStatus').textContent =
-        `Game started. Emails sent to ${res.count} participants.`;
-      document.getElementById('btnStartGame').disabled = true;
-    }else{
-      showToast(res.error || 'Error');
-      document.getElementById('adminStatus').textContent = res.error || 'Error';
-    }
-  });
+  document.getElementById("adminStatus").textContent =
+    JSON.stringify(res);
+};
 
-  // 🧩 10. GIFT STATUS
-  document.getElementById('btnUpdateGift').addEventListener('click', async ()=>{
-    const groupCode = document.getElementById('giftGroupCode').value.trim();
-    const email = document.getElementById('giftEmail').value.trim();
-    const photoUrl = document.getElementById('giftPhotoUrl').value.trim();
-    const status = document.getElementById('giftStatusSelect').value;
+// Start Game
+document.getElementById("btnStartGame").onclick = async ()=>{
+  const group = document.getElementById("inputAdminGroupCode").value.trim();
+  const email = document.getElementById("inputAdminStartEmail").value.trim();
 
-    if(!groupCode || !email){
-      showToast('Enter group code & email');
-      return;
-    }
-    const res = await apiCall('updateGiftStatus',{groupCode,email,photoUrl,status});
-    showToast(res.ok ? 'Status updated' : (res.error || 'Error'));
-  });
+  const res = await apiCall("startGame",{ groupCode:group,adminEmail:email });
+  showToast(res.ok ? "Game started!" : res.error);
+};
+
+// Gift Update
+document.getElementById("btnUpdateGift").onclick = async ()=>{
+  const group = document.getElementById("inputGiftGroupCode").value.trim();
+  const email = document.getElementById("inputGiftEmail").value.trim();
+  const photo = document.getElementById("inputGiftPhoto").value.trim();
+  const status = document.getElementById("selectGiftStatus").value;
+
+  const res = await apiCall("updateGiftStatus",{ groupCode:group,email,photoUrl:photo,status });
+  showToast(res.ok ? "Updated!" : "Error");
+};
 </script>
 
 </body>
