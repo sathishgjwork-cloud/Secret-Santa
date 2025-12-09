@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Secret Santa Group Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body {
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg,#0f172a,#1e293b);
+      color:#e5e7eb;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+    }
+    .container{
+      background:rgba(15,23,42,0.97);
+      max-width:1000px;width:100%;
+      margin:16px;padding:18px 16px 24px;
+      border-radius:18px;
+      border:1px solid rgba(148,163,184,.4);
+      box-shadow:0 20px 45px rgba(0,0,0,.45);
+    }
+    h1{font-size:1.7rem;text-align:center;margin:4px 0 10px;}
+    .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+    .tab-btn{
+      flex:1 1 150px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.5);
+      background:rgba(15,23,42,.8);
+      color:#e5e7eb;
+      padding:6px 10px;
+      font-size:.8rem;font-weight:600;
+      cursor:pointer;
+    }
+    .tab-btn.active{background:#22c55e;color:#052e16;border-color:#22c55e;}
+    .panel{display:none;margin-top:4px;}
+    .panel.active{display:block;}
+    label{font-size:.8rem;display:block;margin:6px 0 2px;color:#cbd5f5;}
+    input,textarea{
+      width:100%;border-radius:10px;
+      border:1px solid rgba(75,85,99,.9);
+      background:rgba(15,23,42,.9);
+      color:#e5e7eb;
+      padding:7px 9px;font-size:.85rem;
+      outline:none;
+    }
+    textarea{min-height:70px;resize:vertical;}
+    input:focus,textarea:focus{
+      border-color:#22c55e;
+      box-shadow:0 0 0 1px rgba(34,197,94,.3);
+    }
+    .btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+    button{
+      border-radius:999px;border:none;
+      padding:7px 14px;font-size:.8rem;
+      font-weight:600;cursor:pointer;
+      display:inline-flex;align-items:center;gap:6px;
+    }
+    .btn-main{background:#22c55e;color:#052e16;}
+    .btn-ghost{background:transparent;color:#e5e7eb;border:1px solid rgba(148,163,184,.7);}
+    .small{font-size:.75rem;color:#9ca3af;}
+    .box{border-radius:12px;border:1px solid rgba(55,65,81,.8);padding:10px 10px;margin-top:8px;background:rgba(15,23,42,.8);}
+    .toast{
+      position:fixed;bottom:16px;right:16px;
+      background:rgba(15,23,42,.98);
+      border-radius:999px;padding:7px 13px;
+      font-size:.78rem;border:1px solid rgba(34,197,94,.7);
+      color:#bbf7d0;box-shadow:0 12px 30px rgba(0,0,0,.6);
+      opacity:0;transform:translateY(10px);
+      pointer-events:none;transition:.18s ease-out;
+      z-index:9999;
+    }
+    .toast.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+    @media(max-width:640px){.container{margin:8px;padding:14px 10px 18px;}h1{font-size:1.4rem;}}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Secret Santa Group Game 🎄</h1>
+  <p style="text-align:center;font-size:.85rem;color:#9ca3af;margin-bottom:10px;">
+    Create a group, let everyone join with OTP, accept rules, then start the game. Each Santa gets an email with their match and wishlist.
+  </p>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="admin-create">1. Admin: Create Group</button>
+    <button class="tab-btn" data-tab="join">2. Participant: Join & Accept Rules</button>
+    <button class="tab-btn" data-tab="admin-start">3. Admin: Start Game</button>
+    <button class="tab-btn" data-tab="gift-status">4. Gift Status</button>
+  </div>
+
+  <!-- Admin create group -->
+  <div class="panel active" id="admin-create">
+    <div class="box">
+      <label>Group Name</label>
+      <input id="groupName" placeholder="Example: Office Secret Santa 2024" />
+      <label style="margin-top:6px;">Admin Email</label>
+      <input id="adminEmailCreate" placeholder="you@example.com" />
+      <div class="btn-row">
+        <button class="btn-main" id="btnCreateGroup">Create Group & Get Code</button>
+      </div>
+      <p class="small" id="groupCodeInfo"></p>
+    </div>
+  </div>
+
+  <!-- Participant panel -->
+  <div class="panel" id="join">
+    <div class="box">
+      <label>Group Code</label>
+      <input id="joinGroupCode" placeholder="6-letter code from admin" />
+      <label>Your Name</label>
+      <input id="joinName" placeholder="Your full name" />
+      <label>Your Email</label>
+      <input id="joinEmail" placeholder="you@example.com" />
+      <label>Your Gift Preference / Wishlist</label>
+      <textarea id="joinWishlist" placeholder="Example: budget under ₹500, likes chocolates, books, etc."></textarea>
+
+      <div class="btn-row">
+        <button class="btn-main" id="btnJoinGroup">Join Group</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(55,65,81,.7);margin:10px 0;">
+
+      <label>Request OTP (after joining)</label>
+      <div class="btn-row">
+        <button class="btn-ghost" id="btnSendOtp">Send OTP to Email</button>
+      </div>
+
+      <label style="margin-top:8px;">Enter OTP</label>
+      <input id="otpInput" placeholder="6 digit code" />
+
+      <div style="margin-top:8px;" class="small">
+        <b>Game rules:</b><br>
+        • Follow the timelines (deadline: 24 Dec, 11:59 PM)<br>
+        • Don’t ask for very costly gifts – keep it reasonable 🎁<br>
+        • Don’t discuss your Santa or receiver with anyone – think yourself and play properly 🤫
+      </div>
+
+      <div style="margin-top:6px;">
+        <label style="display:flex;align-items:center;font-size:.8rem;gap:6px;">
+          <input type="checkbox" id="rulesCheck" style="width:14px;height:14px;"> I accept all the rules.
+        </label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-main" id="btnVerifyAccept">Verify OTP & Accept Rules</button>
+      </div>
+
+      <p class="small" id="joinStatus"></p>
+    </div>
+  </div>
+
+  <!-- Admin start game -->
+  <div class="panel" id="admin-start">
+    <div class="box">
+      <label>Group Code</label>
+      <input id="adminGroupCode" />
+      <label>Admin Email</label>
+      <input id="adminEmailStart" />
+      <div class="btn-row">
+        <button class="btn-ghost" id="btnCheckStatus">Check Acceptance Status</button>
+        <button class="btn-main" id="btnStartGame" disabled>Start Game & Send Emails</button>
+      </div>
+      <p class="small" id="adminStatus"></p>
+    </div>
+  </div>
+
+  <!-- Gift status -->
+  <div class="panel" id="gift-status">
+    <div class="box">
+      <label>Group Code</label>
+      <input id="giftGroupCode" />
+      <label>Your Email</label>
+      <input id="giftEmail" />
+      <label>Gift Photo (Google Drive link)</label>
+      <input id="giftPhotoUrl" placeholder="Paste shared Drive link to your gift photo" />
+      <label>Gift Status</label>
+      <select id="giftStatusSelect" style="width:100%;margin-top:2px;border-radius:10px;border:1px solid rgba(75,85,99,.9);background:rgba(15,23,42,.9);color:#e5e7eb;padding:6px 9px;">
+        <option value="RECEIVED">I got my gift 🎁</option>
+        <option value="NOT_RECEIVED">I did NOT receive my gift</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn-main" id="btnUpdateGift">Submit Gift Status</button>
+      </div>
+      <p class="small">
+        Everyone can view photos on the shared Drive folder (admin can manage manually).  
+        If someone marks "Not received", an email will go to their Santa.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbwCBnij3PfnktMcpD0G8LnrBsLfvAGhqmJJZ4UbDAlhgDQjodwJAYUGYGjvTugrUb1NWQ/exec"; // <-- paste your Apps Script web app URL
+
+  const toast = document.getElementById('toast');
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2000);
+  }
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  async function apiCall(action, payload){
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...payload })
+    });
+    return res.json();
+  }
+
+  // Admin create group
+  document.getElementById('btnCreateGroup').addEventListener('click', async ()=>{
+    const groupName = document.getElementById('groupName').value.trim();
+    const adminEmail = document.getElementById('adminEmailCreate').value.trim();
+    if(!groupName || !adminEmail){ showToast('Enter group name & admin email'); return; }
+    const res = await apiCall('createGroup',{ groupName, adminEmail });
+    if(res.ok){
+      document.getElementById('groupCodeInfo').textContent =
+        `Group created! Code: ${res.groupCode}. Share this code + website link with participants.`;
+      showToast('Group created');
+    }else{
+      showToast(res.error || 'Error');
+    }
+  });
+
+  // Participant join
+  document.getElementById('btnJoinGroup').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('joinGroupCode').value.trim();
+    const name = document.getElementById('joinName').value.trim();
+    const email = document.getElementById('joinEmail').value.trim();
+    const wishlist = document.getElementById('joinWishlist').value.trim();
+    if(!groupCode || !name || !email){ showToast('Fill group code, name, email'); return; }
+
+    const res = await apiCall('joinGroup',{groupCode,name,email,wishlist});
+    document.getElementById('joinStatus').textContent = res.ok ? res.message : (res.error || 'Error');
+    showToast(res.ok ? 'Joined group' : res.error || 'Error');
+  });
+
+  document.getElementById('btnSendOtp').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('joinGroupCode').value.trim();
+    const email = document.getElementById('joinEmail').value.trim();
+    if(!groupCode || !email){ showToast('Enter group code & email'); return; }
+    const res = await apiCall('sendOtp',{groupCode,email});
+    document.getElementById('joinStatus').textContent = res.ok ? res.message : (res.error || 'Error');
+    showToast(res.ok ? 'OTP sent' : res.error || 'Error');
+  });
+
+  document.getElementById('btnVerifyAccept').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('joinGroupCode').value.trim();
+    const email = document.getElementById('joinEmail').value.trim();
+    const otp = document.getElementById('otpInput').value.trim();
+    const rulesAccepted = document.getElementById('rulesCheck').checked;
+    if(!groupCode || !email || !otp){ showToast('Enter code, email & OTP'); return; }
+    if(!rulesAccepted){ showToast('Please accept the rules'); return; }
+
+    const res1 = await apiCall('verifyOtp',{groupCode,email,otp});
+    if(!res1.ok){ showToast(res1.error || 'OTP error'); document.getElementById('joinStatus').textContent = res1.error || 'OTP error'; return; }
+
+    const res2 = await apiCall('acceptRules',{groupCode,email});
+    if(res2.ok){
+      let msg = 'You are verified and accepted rules.';
+      if(res2.allAccepted) msg += ' All participants accepted. Admin can start the game.';
+      document.getElementById('joinStatus').textContent = msg;
+      showToast('Verification & rules accepted');
+    }else{
+      document.getElementById('joinStatus').textContent = res2.error || 'Error';
+      showToast(res2.error || 'Error');
+    }
+  });
+
+  // Admin start game
+  document.getElementById('btnCheckStatus').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('adminGroupCode').value.trim();
+    const adminEmail = document.getElementById('adminEmailStart').value.trim();
+    if(!groupCode || !adminEmail){ showToast('Enter group code & admin email'); return; }
+    const res = await apiCall('checkGroupStatus',{groupCode,adminEmail});
+    if(res.ok){
+      document.getElementById('btnStartGame').disabled = !(res.allAccepted && res.started === 'NO');
+      document.getElementById('adminStatus').textContent =
+        `All accepted: ${res.allAccepted ? 'YES' : 'NO'}, Game already started: ${res.started}`;
+      showToast('Status checked');
+    }else{
+      showToast(res.error || 'Error');
+      document.getElementById('adminStatus').textContent = res.error || 'Error';
+    }
+  });
+
+  document.getElementById('btnStartGame').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('adminGroupCode').value.trim();
+    const adminEmail = document.getElementById('adminEmailStart').value.trim();
+    const res = await apiCall('startGame',{groupCode,adminEmail});
+    if(res.ok){
+      showToast('Game started & emails sent');
+      document.getElementById('adminStatus').textContent =
+        `Game started. Emails sent to ${res.count} participants.`;
+      document.getElementById('btnStartGame').disabled = true;
+    }else{
+      showToast(res.error || 'Error');
+      document.getElementById('adminStatus').textContent = res.error || 'Error';
+    }
+  });
+
+  // Gift status
+  document.getElementById('btnUpdateGift').addEventListener('click', async ()=>{
+    const groupCode = document.getElementById('giftGroupCode').value.trim();
+    const email = document.getElementById('giftEmail').value.trim();
+    const photoUrl = document.getElementById('giftPhotoUrl').value.trim();
+    const status = document.getElementById('giftStatusSelect').value;
+    if(!groupCode || !email){ showToast('Enter group code & email'); return; }
+    const res = await apiCall('updateGiftStatus',{groupCode,email,photoUrl,status});
+    showToast(res.ok ? 'Status updated' : (res.error || 'Error'));
+  });
+</script>
+</body>
+</html>
